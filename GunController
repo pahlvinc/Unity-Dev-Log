@@ -1,0 +1,102 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using EZEffects;
+
+public class Guncontroller : MonoBehaviour
+{
+ 
+    public GameObject controllerRight;
+
+    private SteamVR_TrackedObject trackedObj;
+    private SteamVR_Controller.Device device;
+
+    private SteamVR_TrackedController controller;
+    [Space]
+    [Header("Effects")]
+    public EffectTracer TracerEffect;
+    public Transform TmuzzleTransform;
+    public Transform muzzleTransform;
+    public EffectMuzzleFlash MuzzleEffect;
+    public EffectImpact ImpactEffect;
+    [Space]
+    [Header("Amplitude")]
+    public ushort hapticAmp = 750;
+    public float tracerAmp = 250f;
+    [Space]
+    [Header("Gun Power")]
+    public float impactForce = 30f;
+    public float damage = 10f;
+
+
+
+
+    // Use this for initialization
+    void Start()
+    {
+
+        controller = controllerRight.GetComponent<SteamVR_TrackedController>();
+        controller.TriggerClicked += TriggerPressed;
+        trackedObj = controllerRight.GetComponent<SteamVR_TrackedObject>();
+
+    }
+
+    private void TriggerPressed(object sender, ClickedEventArgs e)
+    {
+        ShootWeapon();
+    }
+
+    public void ShootWeapon()
+    {
+        // Muzzle Effect
+        MuzzleEffect.ShowMuzzleEffect(muzzleTransform.position,muzzleTransform.forward);
+
+        RaycastHit hit = new RaycastHit();
+        Ray ray = new Ray(muzzleTransform.position, muzzleTransform.forward);
+
+        device = SteamVR_Controller.Input((int)trackedObj.index);
+        device.TriggerHapticPulse(hapticAmp);
+        // Tracer Effect
+        TracerEffect.ShowTracerEffect(TmuzzleTransform.position, TmuzzleTransform.forward, tracerAmp);
+        
+
+        if (Physics.Raycast(ray, out hit, 5000f))
+        {
+            if (hit.rigidbody != null)
+            {
+                // double check
+             
+                hit.rigidbody.AddForce(-hit.normal * impactForce);
+            }
+
+            if (hit.collider.attachedRigidbody)
+            {
+                // Console
+                Debug.Log("We've hit " + hit.collider.gameObject.name);
+
+                // Destroy
+                Target target = hit.transform.GetComponent<Target>();
+                if (target != null)
+                {
+                    target.TakeDamage(damage);
+                }
+
+                // Change Scene
+                //MoveScene sceneChange = hit.transform.GetComponent<MoveScene>();
+                //if (sceneChange != null)
+                //{
+                //    sceneChange.changeScene();
+                //}
+                //changeScene(hit.collider.gameObject.name, "Shooting Range");
+
+                // Impact Effect -> doesnt seem to work
+                //Instantiate(ImpactEffect, hit.point, Quaternion.LookRotation(hit.normal));
+
+
+            }
+        }
+    }
+
+
+}
